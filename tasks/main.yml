@@ -174,6 +174,8 @@
   sudo_user: postgres
   postgresql_db:
     login_host={{ zabbix_database_host|default('localhost') }}
+    login_password={{ zabbix_database_master_password|default('') }}
+    login_user={{ zabbix_database_master_name|default('postgres') }}
     name=zabbix
     owner=zabbix
     encoding=UTF-8
