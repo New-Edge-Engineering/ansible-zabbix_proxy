@@ -143,16 +143,6 @@
     - configuration
     - database
 
-- name: check database exists
-  sudo: yes
-  sudo_user: postgres
-  shell: "psql --command='\\l' | grep -c zabbix"
-  register: zabbix_database
-  ignore_errors: yes
-  tags:
-    - zabbix
-    - database
-
 - name: ensure supporting ansible packages are installed for database management
   action: apt name={{item}}
   with_items:
@@ -167,6 +157,7 @@
   sudo: yes
   sudo_user: postgres
   postgresql_user:
+    login_host={{ zabbix_database_host|default('localhost') }}
     encrypted=no
     name=zabbix
     password={{ zabbix_database_password }}
@@ -176,37 +167,28 @@
     - user
     - database
 
-- name: create local database
+- name: create database
   sudo: yes
   sudo_user: postgres
   postgresql_db:
+    login_host={{ zabbix_database_host|default('localhost') }}
     name=zabbix
     owner=zabbix
     encoding=UTF-8
     lc_collate=en_US.UTF-8
     lc_ctype=en_US.UTF-8
     template=template0
-  when: zabbix_database|failed
+  register: zabbix_database
   tags:
     - zabbix
     - setup
-    - database
-
-- name: check database state
-  sudo: yes
-  sudo_user: postgres
-  shell: "psql --command='\\dt' --tuples-only --host={{ zabbix_database_host|default('localhost') }} zabbix zabbix | grep -c public"
-  register: zabbix_database_tables
-  ignore_errors: yes
-  tags:
-    - zabbix
     - database
 
 - name: initialize database schema
   sudo: yes
   sudo_user: postgres
   shell: "psql --file=/usr/share/zabbix-proxy-pgsql/schema.sql --host={{ zabbix_database_host|default('localhost') }} zabbix zabbix"
-  when:  zabbix_database_tables.stdout|int == 0
+  when: zabbix_database|changed
   register: database_initialised
   tags:
     - zabbix
