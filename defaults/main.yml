@@ -6,3 +6,5 @@ zabbix_name: proxy
 zabbix_database_host: localhost
 zabbix_database_password: zabbix
 zabbix_server_address: 127.0.0.2
+zabbix_database_master_name: postgres
+zabbix_database_master_password: postgres
