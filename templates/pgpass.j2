@@ -1,1 +1,4 @@
 {{ zabbix_database_host|default('localhost') }}:5432:zabbix:zabbix:{{ zabbix_database_password }}
+{%- if ansible_ec2_ami_id is defined %}
+{{ zabbix_database_host }}:5432:postgres:{{ zabbix_database_master_name }}:{{ zabbix_database_master_password }}
+{%- endif %}
