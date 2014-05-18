@@ -11,10 +11,17 @@
     - configuration
     - database
 
+- name: ensure supporting ansible packages are installed for database management
+  apt: name=python-psycopg2
+  tags:
+    - zabbix
+    - database
+    - package
+
 - name: check if zabbix exists as database role
   sudo: yes
   sudo_user: postgres
-  shell: "psql --command='\\dg' --host={{ zabbix_database_host|default('localhost') }} | grep zabbix"
+  shell: "psql --command='\\dg' --host={{ zabbix_database_host|default('localhost') }} | grep -c zabbix"
   register: zabbix_database_roles
   ignore_errors: true
   tags:
