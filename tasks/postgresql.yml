@@ -1,0 +1,131 @@
+---
+- name: ensure zabbix postgresql packages are installed
+  apt: "pkg={{ item }}"
+  with_items:
+    - php5-pgsql
+    - zabbix-proxy-pgsql
+  notify:
+    - restart zabbix proxy
+  tags:
+    - zabbix
+    - packages
+
+- name: set database name within the configuration
+  lineinfile:
+    dest=/etc/zabbix/zabbix_proxy.conf
+    regexp="^DBName="
+    line="DBName=zabbix"
+  notify:
+    - restart zabbix proxy
+  tags:
+    - zabbix
+    - configuration
+    - database
+
+- name: set database password within the configuration
+  lineinfile:
+    dest=/etc/zabbix/zabbix_proxy.conf
+    regexp="^DBPassword="
+    line="DBPassword={{ zabbix_database_password }}"
+  notify:
+    - restart zabbix proxy
+  tags:
+    - zabbix
+    - configuration
+    - database
+
+- name: set database socket within the configuration
+  lineinfile:
+    dest=/etc/zabbix/zabbix_proxy.conf
+    regexp="DBSocket=/var/run/mysqld/mysqld.sock"
+    line="# DBSocket=/var/run/mysqld/mysqld.sock"
+  notify:
+    - restart zabbix proxy
+  tags:
+    - zabbix
+    - configuration
+    - database
+
+- name: set database port within the configuration
+  lineinfile:
+    dest=/etc/zabbix/zabbix_proxy.conf
+    insertafter="# DBPort=3306"
+    line="DBPort=5432"
+  notify:
+    - restart zabbix proxy
+  tags:
+    - zabbix
+    - configuration
+    - database
+
+- name: set master server address within the configuration
+  lineinfile:
+    dest=/etc/zabbix/zabbix_proxy.conf
+    regexp="Server="
+    line="Server={{ zabbix_server_address }}"
+  notify:
+    - restart zabbix proxy
+  tags:
+    - zabbix
+    - configuration
+
+- name: set host proxy name within the configuration
+  lineinfile:
+    dest=/etc/zabbix/zabbix_proxy.conf
+    regexp="Hostname="
+    line="Hostname={{ ansible_hostname }}"
+  notify:
+    - restart zabbix proxy
+  tags:
+    - zabbix
+    - configuration
+
+- name: create psql password file
+  sudo: yes
+  sudo_user: postgres
+  template:
+    dest=/var/lib/postgresql/.pgpass
+    src=pgpass.j2
+    mode=0600
+  tags:
+    - zabbix
+    - configuration
+    - database
+
+- include: local/postgresql.yml
+  when: zabbix_database_host is not defined or zabbix_database_host == 'localhost' or zabbix_database_host == '127.0.0.1'
+  tags:
+    - zabbix
+    - database
+
+- include: remote/postgresql.yml
+  when: zabbix_database_host is defined and zabbix_database_host != 'localhost' and zabbix_database_host != '127.0.0.1' and ansible_ec2_ami_id is not defined
+  tags:
+    - zabbix
+    - database
+
+- include: aws/postgresql.yml
+  when: zabbix_database_host is defined and zabbix_database_host != 'localhost' and zabbix_database_host != '127.0.0.1' and ansible_ec2_ami_id is defined
+  tags:
+    - zabbix
+    - database
+
+- name: initialize database schema
+  sudo: yes
+  sudo_user: postgres
+  shell: "psql --file=/usr/share/zabbix-proxy-pgsql/schema.sql --host={{ zabbix_database_host|default('localhost') }} zabbix zabbix"
+  when: zabbix_database|changed
+  tags:
+    - zabbix
+    - database
+
+- name: remove psql password file
+  sudo: yes
+  sudo_user: postgres
+  file:
+    dest="/var/lib/postgresql/.pgpass"
+    state=absent
+  tags:
+    - zabbix
+    - configuration
+    - database

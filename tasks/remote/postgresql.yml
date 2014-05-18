@@ -1,0 +1,58 @@
+---
+- name: set remote database host within the configuration
+  lineinfile:
+    dest=/etc/zabbix/zabbix_proxy.conf
+    regexp="^DBHost="
+    line="DBHost={{ zabbix_database_host }}"
+  notify:
+    - restart zabbix proxy
+  tags:
+    - zabbix
+    - configuration
+    - database
+
+- name: ensure supporting ansible packages are installed for database management
+  apt: name=python-psycopg2
+  tags:
+    - zabbix
+    - database
+    - package
+
+- name: create zabbix database user
+  sudo: yes
+  sudo_user: postgres
+  postgresql_user:
+    login_host={{ zabbix_database_host }}
+    encrypted=no
+    name=zabbix
+    password={{ zabbix_database_password }}
+  tags:
+    - zabbix
+    - configuration
+    - user
+    - database
+
+- name: create database
+  sudo: yes
+  sudo_user: postgres
+  postgresql_db:
+    login_host={{ zabbix_database_host }}
+    name=zabbix
+    owner=zabbix
+    encoding=UTF-8
+    lc_collate=en_US.UTF-8
+    lc_ctype=en_US.UTF-8
+    template=template0
+  register: zabbix_database
+  tags:
+    - zabbix
+    - setup
+    - database
+
+- name: stop local postgresql server
+  service:
+    name=postgresql
+    state=stopped
+  tags:
+    - zabbix
+    - database
