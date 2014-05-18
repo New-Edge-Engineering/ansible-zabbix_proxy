@@ -3,7 +3,7 @@
   lineinfile:
     dest=/etc/zabbix/zabbix_proxy.conf
     regexp="^DBHost="
-    line="DBHost={{ zabbix_database_host }}"
+    line="DBHost={{ zabbix_database_host|mandatory }}"
   notify:
     - restart zabbix proxy
   tags:
@@ -21,7 +21,7 @@
 - name: check if zabbix exists as database role
   sudo: yes
   sudo_user: postgres
-  shell: "psql --command='\\dg' --host={{ zabbix_database_host|default('localhost') }} | grep -c zabbix"
+  shell: "psql --command='\\dg' --host={{ zabbix_database_host|mandatory }} | grep -c zabbix"
   register: zabbix_database_roles
   ignore_errors: true
   tags:
@@ -33,8 +33,8 @@
 - name: create zabbix database role
   sudo: yes
   sudo_user: postgres
-  shell: "psql --command=\"create role zabbix with password '{{ zabbix_database_password }}' login;\" --host={{ zabbix_database_host|default('localhost') }}"
-  when: zabbix_database_roles.stdout == 0
+  shell: "psql --command=\"create role zabbix with password '{{ zabbix_database_password|mandatory }}' login;\" --host={{ zabbix_database_host|mandatory }}"
+  when: zabbix_database_roles.stdout|int == 0
   tags:
     - zabbix
     - configuration
@@ -45,7 +45,7 @@
   sudo: yes
   sudo_user: postgres
   postgresql_db:
-    login_host={{ zabbix_database_host }}
+    login_host={{ zabbix_database_host|mandatory }}
     name=zabbix
     owner=zabbix
     encoding=UTF-8
