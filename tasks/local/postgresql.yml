@@ -12,10 +12,7 @@
     - database
 
 - name: ensure supporting ansible packages are installed for database management
-  apt: name={{item}}
-  with_items:
-    - libpq-dev
-    - python-psycopg2
+  apt: name=libpq-dev
   tags:
     - zabbix
     - database
